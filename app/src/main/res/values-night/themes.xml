@@ -1,0 +1,5 @@
+<resources xmlns:tools="http://tools.android.com">
+    <style name="Theme.PRIMA" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/primary</item>
+    </style>
+</resources>

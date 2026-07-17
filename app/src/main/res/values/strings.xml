@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">PRIMA</string>
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="logout">Logout</string>
+    <string name="katalog_produk">Katalog Produk</string>
+    <string name="buat_transaksi">Buat Transaksi</string>
+    <string name="laporan_transaksi">Laporan Transaksi</string>
+</resources>

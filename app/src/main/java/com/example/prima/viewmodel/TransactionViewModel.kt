@@ -1,0 +1,193 @@
+package com.example.prima.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.prima.api.models.Product
+import com.example.prima.api.models.Transaction
+import com.example.prima.data.SessionManager
+import com.example.prima.data.repository.TransactionRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class CartItem(
+    val product: Product,
+    val quantity: Int
+)
+
+data class TransactionUiState(
+    val isLoading: Boolean = false,
+    val isCreatingTransaction: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val currentTransaction: Transaction? = null,
+    val cartItems: List<CartItem> = emptyList(),
+    val errorMessage: String? = null,
+    val successMessage: String? = null
+)
+
+class TransactionViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repository = TransactionRepository()
+    private val sessionManager = SessionManager(application)
+
+    private val _uiState = MutableStateFlow(TransactionUiState())
+    val uiState: StateFlow<TransactionUiState> = _uiState.asStateFlow()
+
+    fun createTransaction() {
+        if (_uiState.value.isCreatingTransaction) return
+
+        val token = sessionManager.getToken()
+        if (token == null) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Sesi tidak ditemukan, silakan login ulang"
+            )
+            return
+        }
+
+        val kasirId = sessionManager.getUserId()
+        if (kasirId <= 0) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Data kasir tidak valid"
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isCreatingTransaction = true,
+                errorMessage = null
+            )
+
+            val result = repository.createTransaction(token, kasirId)
+            result.onSuccess { response ->
+                val transaction = response.data
+                if (transaction != null) {
+                    _uiState.value = _uiState.value.copy(
+                        isCreatingTransaction = false,
+                        currentTransaction = transaction,
+                        successMessage = "Transaksi ${transaction.transaction_code} berhasil dibuat"
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isCreatingTransaction = false,
+                        errorMessage = "Gagal membuat transaksi: respons kosong"
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isCreatingTransaction = false,
+                    errorMessage = error.message ?: "Gagal membuat transaksi"
+                )
+            }
+        }
+    }
+
+    fun addToCart(product: Product) {
+        val state = _uiState.value
+        val currentItems = state.cartItems.toMutableList()
+        val existingIndex = currentItems.indexOfFirst { it.product.id == product.id }
+
+        if (existingIndex >= 0) {
+            val existing = currentItems[existingIndex]
+            currentItems[existingIndex] = existing.copy(quantity = existing.quantity + 1)
+        } else {
+            currentItems.add(CartItem(product, 1))
+        }
+
+        _uiState.value = _uiState.value.copy(cartItems = currentItems)
+
+        if (state.currentTransaction == null && !state.isCreatingTransaction) {
+            createTransaction()
+        }
+    }
+
+    fun removeFromCart(productId: Int) {
+        val currentItems = _uiState.value.cartItems.toMutableList()
+        currentItems.removeAll { it.product.id == productId }
+        _uiState.value = _uiState.value.copy(cartItems = currentItems)
+    }
+
+    fun updateQuantity(productId: Int, quantity: Int) {
+        if (quantity <= 0) {
+            removeFromCart(productId)
+            return
+        }
+        val currentItems = _uiState.value.cartItems.toMutableList()
+        val index = currentItems.indexOfFirst { it.product.id == productId }
+        if (index >= 0) {
+            currentItems[index] = currentItems[index].copy(quantity = quantity)
+            _uiState.value = _uiState.value.copy(cartItems = currentItems)
+        }
+    }
+
+    fun submitOrder() {
+        val state = _uiState.value
+
+        if (state.isSubmitting) return
+
+        val transactionId = state.currentTransaction?.id
+        if (transactionId == null) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Belum ada transaksi aktif. Tambahkan produk terlebih dahulu."
+            )
+            return
+        }
+
+        val token = sessionManager.getToken()
+        if (token == null) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Sesi tidak ditemukan"
+            )
+            return
+        }
+
+        val items = state.cartItems
+        if (items.isEmpty()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Keranjang masih kosong"
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSubmitting = true,
+                errorMessage = null
+            )
+
+            var allSuccess = true
+            val failedItems = mutableListOf<String>()
+
+            for (item in items) {
+                val result = repository.addDetail(
+                    token, transactionId, item.product.id, item.quantity
+                )
+                result.onFailure { error ->
+                    allSuccess = false
+                    failedItems.add("${item.product.name}: ${error.message}")
+                }
+            }
+
+            if (allSuccess) {
+                _uiState.value = TransactionUiState(
+                    successMessage = "Pesanan berhasil dikirim!"
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isSubmitting = false,
+                    errorMessage = "Gagal memproses: ${failedItems.joinToString("; ")}"
+                )
+            }
+        }
+    }
+
+    fun getTotal(): Double {
+        return _uiState.value.cartItems.sumOf { it.product.price * it.quantity }
+    }
+
+    fun clearMessages() {
+        _uiState.value = _uiState.value.copy(errorMessage = null, successMessage = null)
+    }
+}
