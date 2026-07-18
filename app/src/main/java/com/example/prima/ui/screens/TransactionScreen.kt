@@ -62,9 +62,9 @@ fun TransactionScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = com.example.prima.ui.theme.PrimaryDark,
+                    titleContentColor = androidx.compose.ui.graphics.Color.White,
+                    navigationIconContentColor = androidx.compose.ui.graphics.Color.White
                 )
             )
         }
@@ -282,7 +282,7 @@ private fun CartTab(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
-                        Text("Konfirmasi Pesanan", fontSize = 16.sp)
+                        Text("Konfirmasi Pesanan", style = MaterialTheme.typography.labelLarge)
                     }
                 }
 

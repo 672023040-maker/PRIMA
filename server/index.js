@@ -36,6 +36,8 @@ let transactionDetails = [];
 let nextTransactionId = 1;
 let nextDetailId = 1;
 
+let nextProductId = 11;
+
 // ==================== MIDDLEWARE ====================
 
 function authenticateToken(req, res, next) {
@@ -53,6 +55,13 @@ function authenticateToken(req, res, next) {
   } catch (err) {
     return res.status(401).json({ status: 401, message: 'Token tidak valid' });
   }
+}
+
+function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ status: 403, message: 'Akses ditolak. Hanya admin dan owner yang dapat mengelola produk.' });
+  }
+  next();
 }
 
 // ==================== AUTH ENDPOINTS ====================
@@ -100,6 +109,71 @@ app.get('/api/products', authenticateToken, (req, res) => {
     status: 200,
     message: 'Daftar produk',
     data: products,
+  });
+});
+
+app.post('/api/products', authenticateToken, requireAdmin, (req, res) => {
+  const { name, price, category, description } = req.body;
+
+  if (!name || price === undefined || price === null) {
+    return res.status(422).json({ status: 422, message: 'Nama dan harga produk wajib diisi' });
+  }
+
+  const product = {
+    id: nextProductId++,
+    name,
+    price: Number(price),
+    category: category || '',
+    description: description || '',
+  };
+
+  products.push(product);
+
+  res.status(201).json({
+    status: 201,
+    message: 'Produk berhasil ditambahkan',
+    data: product,
+  });
+});
+
+app.put('/api/products/:id', authenticateToken, requireAdmin, (req, res) => {
+  const productId = parseInt(req.params.id);
+  const { name, price, category, description } = req.body;
+
+  const product = products.find(p => p.id === productId);
+  if (!product) {
+    return res.status(404).json({ status: 404, message: 'Produk tidak ditemukan' });
+  }
+
+  if (!name || price === undefined || price === null) {
+    return res.status(422).json({ status: 422, message: 'Nama dan harga produk wajib diisi' });
+  }
+
+  product.name = name;
+  product.price = Number(price);
+  product.category = category || '';
+  product.description = description || '';
+
+  res.json({
+    status: 200,
+    message: 'Produk berhasil diperbarui',
+    data: product,
+  });
+});
+
+app.delete('/api/products/:id', authenticateToken, requireAdmin, (req, res) => {
+  const productId = parseInt(req.params.id);
+  const index = products.findIndex(p => p.id === productId);
+
+  if (index === -1) {
+    return res.status(404).json({ status: 404, message: 'Produk tidak ditemukan' });
+  }
+
+  products.splice(index, 1);
+
+  res.json({
+    status: 200,
+    message: 'Produk berhasil dihapus',
   });
 });
 

@@ -1,7 +1,11 @@
 package com.example.prima.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Description
@@ -10,14 +14,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.prima.ui.theme.Nunito
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     userName: String?,
+    userRole: String?,
     onNavigateToProducts: () -> Unit,
     onNavigateToTransaction: () -> Unit,
     onNavigateToReport: () -> Unit,
@@ -28,125 +36,150 @@ fun HomeScreen(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Konfirmasi Logout") },
-            text = { Text("Apakah Anda yakin ingin logout?") },
+            title = { Text("Konfirmasi Logout", fontFamily = Nunito) },
+            text = { Text("Apakah Anda yakin ingin logout?", fontFamily = Nunito) },
             confirmButton = {
                 TextButton(onClick = {
                     showDialog = false
                     onLogout()
                 }) {
-                    Text("Ya")
+                    Text("Ya", fontFamily = Nunito)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Tidak")
+                    Text("Tidak", fontFamily = Nunito)
                 }
             }
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("PRIMA - Kasir") },
-                actions = {
-                    IconButton(onClick = { showDialog = true }) {
-                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF90A3DE))
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "PRIMA",
+                    fontFamily = Nunito,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
-            )
+                IconButton(onClick = { showDialog = true }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = "Logout",
+                        tint = Color.White
+                    )
+                }
+            }
         }
-    ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .background(Color(0xFFFAFAF8))
+                .padding(horizontal = 20.dp)
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Text(
-                text = "Selamat Datang,\n$userName",
-                style = MaterialTheme.typography.headlineMedium,
+                text = "Halo, $userName",
+                fontFamily = Nunito,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth()
+                color = Color(0xFF1E293B)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            MenuCard(
-                title = "Katalog Produk",
-                subtitle = "Lihat daftar menu tersedia",
+            MenuItemRow(
                 icon = Icons.AutoMirrored.Filled.MenuBook,
+                label = "Katalog Produk",
                 onClick = onNavigateToProducts
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 56.dp),
+                color = Color(0xFFE2E8F0),
+                thickness = 0.8.dp
+            )
 
-            MenuCard(
-                title = "Buat Transaksi",
-                subtitle = "Buat pesanan baru untuk pelanggan",
+            MenuItemRow(
                 icon = Icons.Default.ShoppingCart,
+                label = "Buat Transaksi",
                 onClick = onNavigateToTransaction
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 56.dp),
+                color = Color(0xFFE2E8F0),
+                thickness = 0.8.dp
+            )
 
-            MenuCard(
-                title = "Laporan Transaksi",
-                subtitle = "Lihat riwayat transaksi harian",
+            MenuItemRow(
                 icon = Icons.Default.Description,
+                label = "Laporan Transaksi",
                 onClick = onNavigateToReport
             )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MenuCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun MenuItemRow(
+    icon: ImageVector,
+    label: String,
     onClick: () -> Unit
 ) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF90A3DE).copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(22.dp),
+                tint = Color(0xFF90A3DE)
             )
-            Spacer(modifier = Modifier.width(20.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
         }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = label,
+            fontFamily = Nunito,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF1E293B),
+            modifier = Modifier.weight(1f)
+        )
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = Color(0xFFB0B8C9)
+        )
     }
 }

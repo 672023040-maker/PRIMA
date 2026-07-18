@@ -15,6 +15,8 @@ object Routes {
     const val LOGIN = "login"
     const val HOME = "home"
     const val PRODUCTS = "products"
+    const val PRODUCT_CREATE = "product/create"
+    const val PRODUCT_EDIT = "product/edit/{id}"
     const val TRANSACTION = "transaction"
     const val REPORT = "report"
 }
@@ -62,6 +64,7 @@ fun NavGraph(
         composable(Routes.HOME) {
             HomeScreen(
                 userName = authState.userName,
+                userRole = authState.userRole,
                 onNavigateToProducts = {
                     navController.navigate(Routes.PRODUCTS)
                 },
@@ -86,8 +89,56 @@ fun NavGraph(
 
             ProductScreen(
                 uiState = productViewModel.uiState.collectAsState().value,
+                userRole = productViewModel.getUserRole(),
                 onRefresh = { productViewModel.loadProducts() },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onAddProduct = { navController.navigate(Routes.PRODUCT_CREATE) },
+                onEditProduct = { product ->
+                    navController.navigate("product/edit/${product.id}")
+                },
+                onDeleteProduct = { product ->
+                    productViewModel.deleteProduct(product.id)
+                }
+            )
+        }
+
+        composable(Routes.PRODUCT_CREATE) {
+            val productViewModel: ProductViewModel = viewModel()
+
+            ProductFormScreen(
+                product = null,
+                uiState = productViewModel.uiState.collectAsState().value,
+                onSave = { name, price, category, description ->
+                    productViewModel.createProduct(name, price, category, description)
+                },
+                onBack = { navController.popBackStack() },
+                onClearMessages = { productViewModel.clearMessages() }
+            )
+        }
+
+        composable(Routes.PRODUCT_EDIT) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("id")?.toIntOrNull()
+            val productViewModel: ProductViewModel = viewModel()
+
+            LaunchedEffect(Unit) {
+                if (productViewModel.uiState.value.products.isEmpty()) {
+                    productViewModel.loadProducts()
+                }
+            }
+
+            val products = productViewModel.uiState.value.products
+            val product = products.find { it.id == productId }
+
+            ProductFormScreen(
+                product = product,
+                uiState = productViewModel.uiState.collectAsState().value,
+                onSave = { name, price, category, description ->
+                    if (productId != null) {
+                        productViewModel.updateProduct(productId, name, price, category, description)
+                    }
+                },
+                onBack = { navController.popBackStack() },
+                onClearMessages = { productViewModel.clearMessages() }
             )
         }
 

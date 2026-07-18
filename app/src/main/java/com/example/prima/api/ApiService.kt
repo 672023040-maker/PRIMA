@@ -15,6 +15,25 @@ interface ApiService {
     @GET("api/products")
     suspend fun getProducts(@Header("Authorization") token: String): Response<ProductResponse>
 
+    @POST("api/products")
+    suspend fun createProduct(
+        @Header("Authorization") token: String,
+        @Body request: CreateProductRequest
+    ): Response<ProductDetailResponse>
+
+    @PUT("api/products/{id}")
+    suspend fun updateProduct(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: UpdateProductRequest
+    ): Response<ProductDetailResponse>
+
+    @DELETE("api/products/{id}")
+    suspend fun deleteProduct(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Response<ApiResponse>
+
     @POST("api/transactions")
     suspend fun createTransaction(
         @Header("Authorization") token: String,
