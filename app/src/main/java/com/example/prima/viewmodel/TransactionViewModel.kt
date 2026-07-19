@@ -27,6 +27,7 @@ data class TransactionUiState(
     val paymentMethods: List<PaymentMethod> = emptyList(),
     val selectedPaymentMethod: PaymentMethod? = null,
     val amountPaid: String = "",
+    val showPaymentDialog: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null
 )
@@ -199,9 +200,9 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
             }
 
             if (allSuccess) {
-                _uiState.value = TransactionUiState(
-                    successMessage = "Pesanan berhasil dikirim!",
-                    paymentMethods = state.paymentMethods
+                _uiState.value = _uiState.value.copy(
+                    isSubmitting = false,
+                    showPaymentDialog = true
                 )
             } else {
                 _uiState.value = _uiState.value.copy(
@@ -260,5 +261,9 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     fun clearMessages() {
         _uiState.value = _uiState.value.copy(errorMessage = null, successMessage = null)
+    }
+
+    fun dismissPaymentDialog() {
+        _uiState.value = _uiState.value.copy(showPaymentDialog = false)
     }
 }

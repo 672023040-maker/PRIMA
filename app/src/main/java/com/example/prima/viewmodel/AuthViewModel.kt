@@ -92,14 +92,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun logout() {
-        sessionManager.clearSession()
-        _uiState.value = AuthUiState()
+        val token = sessionManager.getToken()
 
         viewModelScope.launch {
-            val token = sessionManager.getToken()
             if (token != null) {
                 repository.logout(token)
             }
+            sessionManager.clearSession()
+            _uiState.value = AuthUiState()
             _events.emit(AuthEvent.LogoutSuccess)
         }
     }

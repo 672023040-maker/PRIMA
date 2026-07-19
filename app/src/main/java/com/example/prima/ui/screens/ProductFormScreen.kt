@@ -36,7 +36,7 @@ fun ProductFormScreen(
     val isEditing = product != null
     var name by remember { mutableStateOf(product?.name ?: "") }
     var price by remember { mutableStateOf(if (product != null) product.price.toString() else "") }
-    var category by remember { mutableStateOf(product?.category ?: "") }
+    var category by remember { mutableStateOf(product?.category_name ?: "") }
     var description by remember { mutableStateOf(product?.description ?: "") }
     val focusManager = LocalFocusManager.current
 

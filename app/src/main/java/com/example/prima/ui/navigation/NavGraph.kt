@@ -159,7 +159,11 @@ fun NavGraph(
                 onRemoveFromCart = { id -> transactionViewModel.removeFromCart(id) },
                 onSubmitOrder = { transactionViewModel.submitOrder() },
                 onBack = { navController.popBackStack() },
-                onClearMessages = { transactionViewModel.clearMessages() }
+                onClearMessages = { transactionViewModel.clearMessages() },
+                onSelectPaymentMethod = { method -> transactionViewModel.selectPaymentMethod(method) },
+                onUpdateAmountPaid = { amount -> transactionViewModel.updateAmountPaid(amount) },
+                onConfirmPayment = { transactionViewModel.completePayment() },
+                onDismissPaymentDialog = { transactionViewModel.dismissPaymentDialog() }
             )
         }
 

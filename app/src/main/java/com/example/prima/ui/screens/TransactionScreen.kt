@@ -3,6 +3,7 @@ package com.example.prima.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -15,10 +16,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.prima.api.models.PaymentMethod
 import com.example.prima.api.models.Product
 import com.example.prima.viewmodel.CartItem
 import com.example.prima.viewmodel.ProductUiState
@@ -35,9 +39,23 @@ fun TransactionScreen(
     onRemoveFromCart: (Int) -> Unit,
     onSubmitOrder: () -> Unit,
     onBack: () -> Unit,
-    onClearMessages: () -> Unit
+    onClearMessages: () -> Unit,
+    onSelectPaymentMethod: (PaymentMethod) -> Unit,
+    onUpdateAmountPaid: (String) -> Unit,
+    onConfirmPayment: () -> Unit,
+    onDismissPaymentDialog: () -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    if (transactionUiState.showPaymentDialog) {
+        PaymentDialog(
+            uiState = transactionUiState,
+            onSelectPaymentMethod = onSelectPaymentMethod,
+            onUpdateAmountPaid = onUpdateAmountPaid,
+            onConfirm = onConfirmPayment,
+            onDismiss = onDismissPaymentDialog
+        )
+    }
 
     if (transactionUiState.successMessage != null) {
         AlertDialog(
@@ -107,6 +125,114 @@ fun TransactionScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PaymentDialog(
+    uiState: TransactionUiState,
+    onSelectPaymentMethod: (PaymentMethod) -> Unit,
+    onUpdateAmountPaid: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val total = uiState.cartItems.sumOf { it.product.price * it.quantity }
+    val amountPaid = uiState.amountPaid.toDoubleOrNull() ?: 0.0
+    val change = amountPaid - total
+
+    AlertDialog(
+        onDismissRequest = { /* cannot dismiss during payment */ },
+        title = { Text("Pembayaran") },
+        text = {
+            Column {
+                Text(
+                    text = "Total: Rp${String.format("%,.0f", total)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Metode Pembayaran", style = MaterialTheme.typography.bodyMedium)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = uiState.selectedPaymentMethod?.name ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Pilih metode") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        uiState.paymentMethods.forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(method.name) },
+                                onClick = {
+                                    onSelectPaymentMethod(method)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = uiState.amountPaid,
+                    onValueChange = { onUpdateAmountPaid(it) },
+                    label = { Text("Jumlah Bayar") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    prefix = { Text("Rp ") }
+                )
+
+                if (amountPaid > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (change >= 0) "Kembalian: Rp${String.format("%,.0f", change)}"
+                               else "Kurang: Rp${String.format("%,.0f", -change)}",
+                        color = if (change >= 0) Color(0xFF16A34A) else MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = uiState.selectedPaymentMethod != null &&
+                         amountPaid >= total &&
+                         !uiState.isSubmitting
+            ) {
+                if (uiState.isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White
+                    )
+                } else {
+                    Text("Bayar")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal")
+            }
+        }
+    )
 }
 
 @Composable
