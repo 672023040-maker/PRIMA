@@ -122,7 +122,7 @@ private fun ProductCard(product: Product) {
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                product.category?.let {
+                product.category_name?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,

@@ -4,9 +4,12 @@ data class Product(
     val id: Int,
     val name: String,
     val price: Double,
-    val category: String?,
+    val category_id: Int?,
+    val category_name: String?,
     val description: String?,
-    val image_url: String?
+    val image_url: String?,
+    val stock: Int?,
+    val is_active: Boolean?
 )
 
 data class ProductResponse(

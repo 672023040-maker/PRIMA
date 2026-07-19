@@ -25,6 +25,42 @@ class TransactionRepository {
         }
     }
 
+    suspend fun getCategories(token: String): Result<CategoryResponse> {
+        return try {
+            val response = api.getCategories("Bearer $token")
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Gagal memuat kategori"))
+                }
+            } else {
+                Result.failure(Exception("Gagal memuat kategori (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun getPaymentMethods(token: String): Result<PaymentMethodResponse> {
+        return try {
+            val response = api.getPaymentMethods("Bearer $token")
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Gagal memuat metode pembayaran"))
+                }
+            } else {
+                Result.failure(Exception("Gagal memuat metode pembayaran (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))
+        }
+    }
+
     suspend fun createTransaction(token: String, kasirId: Int): Result<TransactionResponse> {
         return try {
             val response = api.createTransaction(
@@ -67,6 +103,33 @@ class TransactionRepository {
                 }
             } else {
                 Result.failure(Exception("Gagal menambah detail (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun completeTransaction(
+        token: String,
+        transactionId: Int,
+        paymentMethodId: Int,
+        amountPaid: Double
+    ): Result<CompleteTransactionResponse> {
+        return try {
+            val response = api.completeTransaction(
+                "Bearer $token",
+                transactionId,
+                CompleteTransactionRequest(paymentMethodId, amountPaid)
+            )
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Gagal menyelesaikan transaksi"))
+                }
+            } else {
+                Result.failure(Exception("Gagal menyelesaikan transaksi (${response.code()})"))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))

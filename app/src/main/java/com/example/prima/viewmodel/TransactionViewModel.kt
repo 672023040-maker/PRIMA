@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.prima.api.models.Product
 import com.example.prima.api.models.Transaction
+import com.example.prima.api.models.PaymentMethod
 import com.example.prima.data.SessionManager
 import com.example.prima.data.repository.TransactionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,9 @@ data class TransactionUiState(
     val isSubmitting: Boolean = false,
     val currentTransaction: Transaction? = null,
     val cartItems: List<CartItem> = emptyList(),
+    val paymentMethods: List<PaymentMethod> = emptyList(),
+    val selectedPaymentMethod: PaymentMethod? = null,
+    val amountPaid: String = "",
     val errorMessage: String? = null,
     val successMessage: String? = null
 )
@@ -34,6 +38,30 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _uiState = MutableStateFlow(TransactionUiState())
     val uiState: StateFlow<TransactionUiState> = _uiState.asStateFlow()
+
+    init {
+        loadPaymentMethods()
+    }
+
+    private fun loadPaymentMethods() {
+        val token = sessionManager.getToken() ?: return
+        viewModelScope.launch {
+            val result = repository.getPaymentMethods(token)
+            result.onSuccess { response ->
+                _uiState.value = _uiState.value.copy(
+                    paymentMethods = response.data ?: emptyList()
+                )
+            }
+        }
+    }
+
+    fun selectPaymentMethod(method: PaymentMethod) {
+        _uiState.value = _uiState.value.copy(selectedPaymentMethod = method)
+    }
+
+    fun updateAmountPaid(amount: String) {
+        _uiState.value = _uiState.value.copy(amountPaid = amount)
+    }
 
     fun createTransaction() {
         if (_uiState.value.isCreatingTransaction) return
@@ -172,12 +200,55 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
             if (allSuccess) {
                 _uiState.value = TransactionUiState(
-                    successMessage = "Pesanan berhasil dikirim!"
+                    successMessage = "Pesanan berhasil dikirim!",
+                    paymentMethods = state.paymentMethods
                 )
             } else {
                 _uiState.value = _uiState.value.copy(
                     isSubmitting = false,
                     errorMessage = "Gagal memproses: ${failedItems.joinToString("; ")}"
+                )
+            }
+        }
+    }
+
+    fun completePayment() {
+        val state = _uiState.value
+        val transactionId = state.currentTransaction?.id
+        val paymentMethod = state.selectedPaymentMethod
+        val amountPaidStr = state.amountPaid
+
+        if (transactionId == null) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Tidak ada transaksi aktif")
+            return
+        }
+
+        if (paymentMethod == null) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Pilih metode pembayaran")
+            return
+        }
+
+        val amountPaid = amountPaidStr.toDoubleOrNull()
+        if (amountPaid == null || amountPaid <= 0) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Masukkan jumlah bayar yang valid")
+            return
+        }
+
+        val token = sessionManager.getToken() ?: return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSubmitting = true, errorMessage = null)
+
+            val result = repository.completeTransaction(token, transactionId, paymentMethod.id, amountPaid)
+            result.onSuccess {
+                _uiState.value = TransactionUiState(
+                    successMessage = "Pembayaran berhasil diselesaikan!",
+                    paymentMethods = state.paymentMethods
+                )
+            }.onFailure { error ->
+                _uiState.value = _uiState.value.copy(
+                    isSubmitting = false,
+                    errorMessage = error.message ?: "Gagal memproses pembayaran"
                 )
             }
         }
