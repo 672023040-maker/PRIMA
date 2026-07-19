@@ -25,36 +25,54 @@ class TransactionRepository {
         }
     }
 
-    suspend fun getCategories(token: String): Result<CategoryResponse> {
+    suspend fun createProduct(token: String, request: CreateProductRequest): Result<ProductDetailResponse> {
         return try {
-            val response = api.getCategories("Bearer $token")
+            val response = api.createProduct("Bearer $token", request)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
                     Result.success(body)
                 } else {
-                    Result.failure(Exception("Gagal memuat kategori"))
+                    Result.failure(Exception("Gagal menambahkan produk"))
                 }
             } else {
-                Result.failure(Exception("Gagal memuat kategori (${response.code()})"))
+                Result.failure(Exception("Gagal menambahkan produk (${response.code()})"))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))
         }
     }
 
-    suspend fun getPaymentMethods(token: String): Result<PaymentMethodResponse> {
+    suspend fun updateProduct(token: String, id: Int, request: UpdateProductRequest): Result<ProductDetailResponse> {
         return try {
-            val response = api.getPaymentMethods("Bearer $token")
+            val response = api.updateProduct("Bearer $token", id, request)
             if (response.isSuccessful) {
                 val body = response.body()
                 if (body != null) {
                     Result.success(body)
                 } else {
-                    Result.failure(Exception("Gagal memuat metode pembayaran"))
+                    Result.failure(Exception("Gagal memperbarui produk"))
                 }
             } else {
-                Result.failure(Exception("Gagal memuat metode pembayaran (${response.code()})"))
+                Result.failure(Exception("Gagal memperbarui produk (${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))
+        }
+    }
+
+    suspend fun deleteProduct(token: String, id: Int): Result<ApiResponse> {
+        return try {
+            val response = api.deleteProduct("Bearer $token", id)
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(Exception("Gagal menghapus produk"))
+                }
+            } else {
+                Result.failure(Exception("Gagal menghapus produk (${response.code()})"))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))
@@ -103,33 +121,6 @@ class TransactionRepository {
                 }
             } else {
                 Result.failure(Exception("Gagal menambah detail (${response.code()})"))
-            }
-        } catch (e: Exception) {
-            Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))
-        }
-    }
-
-    suspend fun completeTransaction(
-        token: String,
-        transactionId: Int,
-        paymentMethodId: Int,
-        amountPaid: Double
-    ): Result<CompleteTransactionResponse> {
-        return try {
-            val response = api.completeTransaction(
-                "Bearer $token",
-                transactionId,
-                CompleteTransactionRequest(paymentMethodId, amountPaid)
-            )
-            if (response.isSuccessful) {
-                val body = response.body()
-                if (body != null) {
-                    Result.success(body)
-                } else {
-                    Result.failure(Exception("Gagal menyelesaikan transaksi"))
-                }
-            } else {
-                Result.failure(Exception("Gagal menyelesaikan transaksi (${response.code()})"))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Gagal terhubung ke server: ${e.localizedMessage}"))

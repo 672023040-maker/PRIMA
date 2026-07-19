@@ -15,11 +15,24 @@ interface ApiService {
     @GET("api/products")
     suspend fun getProducts(@Header("Authorization") token: String): Response<ProductResponse>
 
-    @GET("api/categories")
-    suspend fun getCategories(@Header("Authorization") token: String): Response<CategoryResponse>
+    @POST("api/products")
+    suspend fun createProduct(
+        @Header("Authorization") token: String,
+        @Body request: CreateProductRequest
+    ): Response<ProductDetailResponse>
 
-    @GET("api/payment-methods")
-    suspend fun getPaymentMethods(@Header("Authorization") token: String): Response<PaymentMethodResponse>
+    @PUT("api/products/{id}")
+    suspend fun updateProduct(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: UpdateProductRequest
+    ): Response<ProductDetailResponse>
+
+    @DELETE("api/products/{id}")
+    suspend fun deleteProduct(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Response<ApiResponse>
 
     @POST("api/transactions")
     suspend fun createTransaction(
@@ -33,13 +46,6 @@ interface ApiService {
         @Path("id") transactionId: Int,
         @Body request: TransactionDetailRequest
     ): Response<TransactionDetailResponse>
-
-    @POST("api/transactions/{id}/complete")
-    suspend fun completeTransaction(
-        @Header("Authorization") token: String,
-        @Path("id") transactionId: Int,
-        @Body request: CompleteTransactionRequest
-    ): Response<CompleteTransactionResponse>
 
     @GET("api/transactions")
     suspend fun getTransactions(

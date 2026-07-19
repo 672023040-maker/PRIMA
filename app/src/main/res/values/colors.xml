@@ -2,8 +2,8 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="primary">#FF1565C0</color>
-    <color name="primary_variant">#FF0D47A1</color>
+    <color name="primary">#FF90A3DE</color>
+    <color name="primary_variant">#FF7B91CC</color>
     <color name="secondary">#FF26A69A</color>
     <color name="background">#FFF5F5F5</color>
     <color name="surface">#FFFFFFFF</color>
