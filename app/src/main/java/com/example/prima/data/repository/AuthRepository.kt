@@ -1,13 +1,12 @@
 package com.example.prima.data.repository
 
+import com.example.prima.api.ApiService
 import com.example.prima.api.RetrofitClient
 import com.example.prima.api.models.ApiResponse
 import com.example.prima.api.models.LoginRequest
 import com.example.prima.api.models.LoginResponse
 
-class AuthRepository {
-
-    private val api = RetrofitClient.apiService
+class AuthRepository(private val api: ApiService = RetrofitClient.apiService) {
 
     suspend fun login(email: String, password: String): Result<LoginResponse> {
         return try {

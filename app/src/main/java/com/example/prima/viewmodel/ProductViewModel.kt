@@ -44,8 +44,10 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
 
             val result = repository.getProducts(token)
             result.onSuccess { response ->
-                _uiState.value = ProductUiState(
-                    products = response.data ?: emptyList()
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    products = response.data ?: emptyList(),
+                    errorMessage = null
                 )
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -72,13 +74,13 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
                     isSaving = false,
                     successMessage = "Produk berhasil ditambahkan"
                 )
-                loadProducts()
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
                     errorMessage = error.message ?: "Gagal menambahkan produk"
                 )
             }
+            loadProducts()
         }
     }
 
@@ -98,13 +100,13 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
                     isSaving = false,
                     successMessage = "Produk berhasil diperbarui"
                 )
-                loadProducts()
             }.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
                     errorMessage = error.message ?: "Gagal memperbarui produk"
                 )
             }
+            loadProducts()
         }
     }
 

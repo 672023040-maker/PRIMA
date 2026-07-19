@@ -1,11 +1,10 @@
 package com.example.prima.data.repository
 
+import com.example.prima.api.ApiService
 import com.example.prima.api.RetrofitClient
 import com.example.prima.api.models.*
 
-class TransactionRepository {
-
-    private val api = RetrofitClient.apiService
+class TransactionRepository(private val api: ApiService = RetrofitClient.apiService) {
 
     suspend fun getProducts(token: String): Result<ProductResponse> {
         return try {

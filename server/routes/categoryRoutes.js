@@ -12,18 +12,20 @@ router.get('/', async (req, res) => {
       data: categories,
     });
   } catch (err) {
+    console.error('Gagal memuat kategori:', err);
     res.status(500).json({ status: 500, message: 'Gagal memuat kategori' });
   }
 });
 
 router.get('/:id', async (req, res) => {
   try {
-    const category = await categoryModel.findById(req.params.id);
+    const category = await categoryModel.findById(parseInt(req.params.id));
     if (!category) {
       return res.status(404).json({ status: 404, message: 'Kategori tidak ditemukan' });
     }
     res.json({ status: 200, data: category });
   } catch (err) {
+    console.error('Gagal memuat kategori:', err);
     res.status(500).json({ status: 500, message: 'Gagal memuat kategori' });
   }
 });

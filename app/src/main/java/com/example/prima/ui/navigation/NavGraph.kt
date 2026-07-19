@@ -145,26 +145,36 @@ fun NavGraph(
         composable(Routes.TRANSACTION) {
             val productViewModel: ProductViewModel = viewModel()
             val transactionViewModel: TransactionViewModel = viewModel()
+            val transactionUiState by transactionViewModel.uiState.collectAsState()
 
             LaunchedEffect(Unit) {
                 productViewModel.loadProducts()
             }
 
-            TransactionScreen(
-                productUiState = productViewModel.uiState.collectAsState().value,
-                transactionUiState = transactionViewModel.uiState.collectAsState().value,
-                onLoadProducts = { productViewModel.loadProducts() },
-                onAddToCart = { product -> transactionViewModel.addToCart(product) },
-                onUpdateQuantity = { id, qty -> transactionViewModel.updateQuantity(id, qty) },
-                onRemoveFromCart = { id -> transactionViewModel.removeFromCart(id) },
-                onSubmitOrder = { transactionViewModel.submitOrder() },
-                onBack = { navController.popBackStack() },
-                onClearMessages = { transactionViewModel.clearMessages() },
-                onSelectPaymentMethod = { method -> transactionViewModel.selectPaymentMethod(method) },
-                onUpdateAmountPaid = { amount -> transactionViewModel.updateAmountPaid(amount) },
-                onConfirmPayment = { transactionViewModel.completePayment() },
-                onDismissPaymentDialog = { transactionViewModel.dismissPaymentDialog() }
-            )
+            if (transactionUiState.showReceiptScreen && transactionUiState.lastCompletedTransaction != null) {
+                ReceiptScreen(
+                    transaction = transactionUiState.lastCompletedTransaction!!,
+                    onDone = {
+                        transactionViewModel.dismissReceiptScreen()
+                    }
+                )
+            } else {
+                TransactionScreen(
+                    productUiState = productViewModel.uiState.collectAsState().value,
+                    transactionUiState = transactionUiState,
+                    onLoadProducts = { productViewModel.loadProducts() },
+                    onAddToCart = { product -> transactionViewModel.addToCart(product) },
+                    onUpdateQuantity = { id, qty -> transactionViewModel.updateQuantity(id, qty) },
+                    onRemoveFromCart = { id -> transactionViewModel.removeFromCart(id) },
+                    onSubmitOrder = { transactionViewModel.submitOrder() },
+                    onBack = { navController.popBackStack() },
+                    onClearMessages = { transactionViewModel.clearMessages() },
+                    onSelectPaymentMethod = { method -> transactionViewModel.selectPaymentMethod(method) },
+                    onUpdateAmountPaid = { amount -> transactionViewModel.updateAmountPaid(amount) },
+                    onConfirmPayment = { transactionViewModel.completePayment() },
+                    onDismissPaymentDialog = { transactionViewModel.dismissPaymentDialog() }
+                )
+            }
         }
 
         composable(Routes.REPORT) {

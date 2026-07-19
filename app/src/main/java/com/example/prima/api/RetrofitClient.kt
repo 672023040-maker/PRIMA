@@ -8,10 +8,10 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val BASE_URL = "http://10.0.2.2:3000/"
+    private var baseUrl: String = "http://10.0.2.2:3000/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.BASIC
     }
 
     private val okHttpClient = OkHttpClient.Builder()
@@ -21,11 +21,25 @@ object RetrofitClient {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+    private var retrofit: Retrofit = createRetrofit()
 
-    val apiService: ApiService = retrofit.create(ApiService::class.java)
+    private fun createRetrofit(): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+
+    fun setBaseUrl(url: String) {
+        val normalizedUrl = url.trimEnd('/') + "/"
+        if (normalizedUrl != baseUrl) {
+            baseUrl = normalizedUrl
+            retrofit = createRetrofit()
+            apiService = retrofit.create(ApiService::class.java)
+        }
+    }
+
+    var apiService: ApiService = retrofit.create(ApiService::class.java)
+        private set
 }

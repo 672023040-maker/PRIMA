@@ -45,4 +45,12 @@ const deleteProduct = async (id) => {
   await query('UPDATE products SET is_active = FALSE, updated_at = NOW() WHERE id = $1', [id]);
 };
 
-module.exports = { findAll, findById, create, update, deleteProduct };
+const decrementStock = async (id, quantity) => {
+  const result = await query(
+    'UPDATE products SET stock = stock - $1, updated_at = NOW() WHERE id = $2 AND stock >= $1 RETURNING *',
+    [quantity, id]
+  );
+  return result.rows[0];
+};
+
+module.exports = { findAll, findById, create, update, deleteProduct, decrementStock };

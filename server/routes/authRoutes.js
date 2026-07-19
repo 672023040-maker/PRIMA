@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
+const { invalidateToken, isTokenBlacklisted } = require('../middleware/auth');
 require('dotenv').config();
 
 const router = express.Router();
@@ -42,11 +43,15 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (err) {
+    console.error('Gagal login:', err);
     res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' });
   }
 });
 
 router.post('/logout', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (token) invalidateToken(token);
   res.json({ status: 200, message: 'Logout berhasil' });
 });
 

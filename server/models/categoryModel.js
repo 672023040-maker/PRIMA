@@ -10,6 +10,21 @@ const findById = async (id) => {
   return result.rows[0];
 };
 
+const findByName = async (name) => {
+  const result = await query('SELECT * FROM categories WHERE name = $1', [name]);
+  return result.rows[0];
+};
+
+const findOrCreateByName = async (name) => {
+  const existing = await findByName(name);
+  if (existing) return existing;
+  const result = await query(
+    'INSERT INTO categories (name) VALUES ($1) RETURNING *',
+    [name]
+  );
+  return result.rows[0];
+};
+
 const create = async (name, description) => {
   const result = await query(
     'INSERT INTO categories (name, description) VALUES ($1, $2) RETURNING *',
@@ -27,7 +42,8 @@ const update = async (id, name, description) => {
 };
 
 const deleteCategory = async (id) => {
-  await query('DELETE FROM categories WHERE id = $1', [id]);
+  const result = await query('DELETE FROM categories WHERE id = $1 RETURNING *', [id]);
+  return result.rows[0];
 };
 
-module.exports = { findAll, findById, create, update, deleteCategory };
+module.exports = { findAll, findById, findByName, findOrCreateByName, create, update, deleteCategory };

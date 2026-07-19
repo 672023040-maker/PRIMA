@@ -94,7 +94,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             Text(
-                text = "Halo, $userName",
+                text = "Halo, ${userName ?: "User"}",
                 fontFamily = Nunito,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,

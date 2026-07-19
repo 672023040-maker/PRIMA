@@ -12,6 +12,7 @@ router.get('/', async (req, res) => {
       data: methods,
     });
   } catch (err) {
+    console.error('Gagal memuat metode pembayaran:', err);
     res.status(500).json({ status: 500, message: 'Gagal memuat metode pembayaran' });
   }
 });

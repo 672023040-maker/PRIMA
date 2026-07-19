@@ -2,14 +2,29 @@ package com.example.prima.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 
 class SessionManager(context: Context) {
 
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences
+
+    init {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        prefs = EncryptedSharedPreferences.create(
+            context,
+            PREF_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 
     companion object {
-        private const val PREF_NAME = "prima_session"
+        private const val PREF_NAME = "prima_session_encrypted"
         private const val KEY_TOKEN = "token"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_NAME = "user_name"
@@ -26,7 +41,7 @@ class SessionManager(context: Context) {
             putString(KEY_USER_EMAIL, email)
             putString(KEY_USER_ROLE, role)
             putBoolean(KEY_IS_LOGGED_IN, true)
-            apply()
+            commit()
         }
     }
 
@@ -43,6 +58,6 @@ class SessionManager(context: Context) {
     fun isLoggedIn(): Boolean = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
 
     fun clearSession() {
-        prefs.edit().clear().apply()
+        prefs.edit().clear().commit()
     }
 }

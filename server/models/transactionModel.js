@@ -36,15 +36,26 @@ const findByKasir = async (kasirId) => {
     [kasirId]
   );
 
-  for (let t of transactions.rows) {
-    const details = await query(
-      `SELECT td.*, p.name as product_name
-       FROM transaction_details td
-       LEFT JOIN products p ON td.product_id = p.id
-       WHERE td.transaction_id = $1`,
-      [t.id]
-    );
-    t.details = details.rows;
+  if (transactions.rows.length === 0) return [];
+
+  const ids = transactions.rows.map(t => t.id);
+  const details = await query(
+    `SELECT td.*, p.name as product_name
+     FROM transaction_details td
+     LEFT JOIN products p ON td.product_id = p.id
+     WHERE td.transaction_id = ANY($1::int[])
+     ORDER BY td.id`,
+    [ids]
+  );
+
+  const detailsByTrx = {};
+  for (const d of details.rows) {
+    if (!detailsByTrx[d.transaction_id]) detailsByTrx[d.transaction_id] = [];
+    detailsByTrx[d.transaction_id].push(d);
+  }
+
+  for (const t of transactions.rows) {
+    t.details = detailsByTrx[t.id] || [];
   }
 
   return transactions.rows;
@@ -59,15 +70,26 @@ const findAll = async () => {
      ORDER BY t.created_at DESC`
   );
 
-  for (let t of transactions.rows) {
-    const details = await query(
-      `SELECT td.*, p.name as product_name
-       FROM transaction_details td
-       LEFT JOIN products p ON td.product_id = p.id
-       WHERE td.transaction_id = $1`,
-      [t.id]
-    );
-    t.details = details.rows;
+  if (transactions.rows.length === 0) return [];
+
+  const ids = transactions.rows.map(t => t.id);
+  const details = await query(
+    `SELECT td.*, p.name as product_name
+     FROM transaction_details td
+     LEFT JOIN products p ON td.product_id = p.id
+     WHERE td.transaction_id = ANY($1::int[])
+     ORDER BY td.id`,
+    [ids]
+  );
+
+  const detailsByTrx = {};
+  for (const d of details.rows) {
+    if (!detailsByTrx[d.transaction_id]) detailsByTrx[d.transaction_id] = [];
+    detailsByTrx[d.transaction_id].push(d);
+  }
+
+  for (const t of transactions.rows) {
+    t.details = detailsByTrx[t.id] || [];
   }
 
   return transactions.rows;

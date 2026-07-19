@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class CartItem(
     val product: Product,
@@ -23,11 +25,13 @@ data class TransactionUiState(
     val isCreatingTransaction: Boolean = false,
     val isSubmitting: Boolean = false,
     val currentTransaction: Transaction? = null,
+    val lastCompletedTransaction: Transaction? = null,
     val cartItems: List<CartItem> = emptyList(),
     val paymentMethods: List<PaymentMethod> = emptyList(),
     val selectedPaymentMethod: PaymentMethod? = null,
     val amountPaid: String = "",
     val showPaymentDialog: Boolean = false,
+    val showReceiptScreen: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null
 )
@@ -36,6 +40,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     private val repository = TransactionRepository()
     private val sessionManager = SessionManager(application)
+    private val transactionMutex = Mutex()
 
     private val _uiState = MutableStateFlow(TransactionUiState())
     val uiState: StateFlow<TransactionUiState> = _uiState.asStateFlow()
@@ -84,38 +89,42 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isCreatingTransaction = true,
-                errorMessage = null
-            )
+            transactionMutex.withLock {
+                if (_uiState.value.isCreatingTransaction) return@withLock
+                if (_uiState.value.currentTransaction != null) return@withLock
 
-            val result = repository.createTransaction(token, kasirId)
-            result.onSuccess { response ->
-                val transaction = response.data
-                if (transaction != null) {
+                _uiState.value = _uiState.value.copy(
+                    isCreatingTransaction = true,
+                    errorMessage = null
+                )
+
+                val result = repository.createTransaction(token, kasirId)
+                result.onSuccess { response ->
+                    val transaction = response.data
+                    if (transaction != null) {
+                        _uiState.value = _uiState.value.copy(
+                            isCreatingTransaction = false,
+                            currentTransaction = transaction,
+                            successMessage = "Transaksi ${transaction.transaction_code} berhasil dibuat"
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isCreatingTransaction = false,
+                            errorMessage = "Gagal membuat transaksi: respons kosong"
+                        )
+                    }
+                }.onFailure { error ->
                     _uiState.value = _uiState.value.copy(
                         isCreatingTransaction = false,
-                        currentTransaction = transaction,
-                        successMessage = "Transaksi ${transaction.transaction_code} berhasil dibuat"
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        isCreatingTransaction = false,
-                        errorMessage = "Gagal membuat transaksi: respons kosong"
+                        errorMessage = error.message ?: "Gagal membuat transaksi"
                     )
                 }
-            }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(
-                    isCreatingTransaction = false,
-                    errorMessage = error.message ?: "Gagal membuat transaksi"
-                )
             }
         }
     }
 
     fun addToCart(product: Product) {
-        val state = _uiState.value
-        val currentItems = state.cartItems.toMutableList()
+        val currentItems = _uiState.value.cartItems.toMutableList()
         val existingIndex = currentItems.indexOfFirst { it.product.id == product.id }
 
         if (existingIndex >= 0) {
@@ -127,8 +136,13 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
         _uiState.value = _uiState.value.copy(cartItems = currentItems)
 
-        if (state.currentTransaction == null && !state.isCreatingTransaction) {
-            createTransaction()
+        viewModelScope.launch {
+            transactionMutex.withLock {
+                val state = _uiState.value
+                if (state.currentTransaction == null && !state.isCreatingTransaction) {
+                    createTransaction()
+                }
+            }
         }
     }
 
@@ -181,34 +195,36 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isSubmitting = true,
-                errorMessage = null
-            )
-
-            var allSuccess = true
-            val failedItems = mutableListOf<String>()
-
-            for (item in items) {
-                val result = repository.addDetail(
-                    token, transactionId, item.product.id, item.quantity
+            transactionMutex.withLock {
+                _uiState.value = _uiState.value.copy(
+                    isSubmitting = true,
+                    errorMessage = null
                 )
-                result.onFailure { error ->
-                    allSuccess = false
-                    failedItems.add("${item.product.name}: ${error.message}")
+
+                var allSuccess = true
+                val failedItems = mutableListOf<String>()
+
+                for (item in items) {
+                    val result = repository.addDetail(
+                        token, transactionId, item.product.id, item.quantity
+                    )
+                    result.onFailure { error ->
+                        allSuccess = false
+                        failedItems.add("${item.product.name}: ${error.message}")
+                    }
                 }
-            }
 
-            if (allSuccess) {
-                _uiState.value = _uiState.value.copy(
-                    isSubmitting = false,
-                    showPaymentDialog = true
-                )
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    isSubmitting = false,
-                    errorMessage = "Gagal memproses: ${failedItems.joinToString("; ")}"
-                )
+                if (allSuccess) {
+                    _uiState.value = _uiState.value.copy(
+                        isSubmitting = false,
+                        showPaymentDialog = true
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isSubmitting = false,
+                        errorMessage = "Gagal memproses: ${failedItems.joinToString("; ")}"
+                    )
+                }
             }
         }
     }
@@ -241,9 +257,10 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
             _uiState.value = _uiState.value.copy(isSubmitting = true, errorMessage = null)
 
             val result = repository.completeTransaction(token, transactionId, paymentMethod.id, amountPaid)
-            result.onSuccess {
+            result.onSuccess { response ->
                 _uiState.value = TransactionUiState(
-                    successMessage = "Pembayaran berhasil diselesaikan!",
+                    lastCompletedTransaction = response.data,
+                    showReceiptScreen = true,
                     paymentMethods = state.paymentMethods
                 )
             }.onFailure { error ->
@@ -265,5 +282,12 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     fun dismissPaymentDialog() {
         _uiState.value = _uiState.value.copy(showPaymentDialog = false)
+    }
+
+    fun dismissReceiptScreen() {
+        _uiState.value = _uiState.value.copy(
+            showReceiptScreen = false,
+            lastCompletedTransaction = null
+        )
     }
 }
